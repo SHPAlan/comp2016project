@@ -153,6 +153,8 @@ public class FlightManager {
 			return true;
 		} catch (SQLException e) {
 			e.printStackTrace();
+			//12131231
+			//1231
 			return false;
 		}
 	}
