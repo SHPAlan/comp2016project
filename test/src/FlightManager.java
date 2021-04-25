@@ -477,7 +477,7 @@ public class FlightManager {
 	}
 
 	/**
-	 * Close the manager. Do not change this function.
+	 *123
 	 */
 	public void close() {
 		System.out.println("Thanks for using this manager! Bye...");
