@@ -11,6 +11,7 @@ import java.util.Scanner;
 
 import javax.swing.*;
 
+import java.util.Date;
 import java.util.Properties;
 
 import com.jcraft.jsch.JSch;
@@ -25,7 +26,7 @@ import com.jcraft.jsch.Session;
  * 
  * @author comp1160/2016
  */
-//123
+
 public class FlightManager {
 
 	Scanner in = null;
@@ -50,10 +51,9 @@ public class FlightManager {
 
 	String[] options = { // if you want to add an option, append to the end of
 							// this array
-			"add a flight", "print flight information (by flight_no)", "delete a flight (by flight_no)",
+			"add a flight", "delete a flight (by flight_no)", "print flight information (by flight_no)", 
 			"select a flight (by source, dest, stop_no = 0)", "select a flight (by source, dest, stop_no = 1)",
-			"select a flight (by source, dest, connection_no, travel_hours)",
-			"exit" };
+			"book a flight (by customer_id, flight_no)", "cancel a flight (by customer_id, booking_id)", "exit"};
 
 	/**
 	 * Get YES or NO. Do not change this function.
@@ -137,8 +137,8 @@ public class FlightManager {
 	 * @return boolean
 	 */
 	public boolean loginDB() {
-		String username = "e1234567";//Replace e1234567 to your username
-		String password = "e1234567";//Replace e1234567 to your password
+		String username = "e9229895";//Replace e1234567 to your username
+		String password = "e9229895";//Replace e1234567 to your password
 		
 		/* Do not change the code below */
 		if(username.equalsIgnoreCase("e1234567") || password.equalsIgnoreCase("e1234567")) {
@@ -154,8 +154,6 @@ public class FlightManager {
 			return true;
 		} catch (SQLException e) {
 			e.printStackTrace();
-			//12131231
-			//1231
 			return false;
 		}
 	}
@@ -201,8 +199,10 @@ public class FlightManager {
 				selectFlightsInZeroStop();
 			} else if (options[choice - 1].equals("select a flight (by source, dest, stop_no = 1)")) {
 				selectFlightsInOneStop();
-			} else if (options[choice - 1].equals("select a flight (by source, dest, connection_no, travel_hours)")) {
-				selectFlights();
+			} else if (options[choice - 1].equals("book a flight (by customer_id, flight_no)")) {
+				bookFlight();
+			} else if (options[choice - 1].equals("cancel a flight (by customer_id, booking_id)")) {
+				cancelFlight();
 			} else if (options[choice - 1].equals("exit")) {
 				break;
 			}
@@ -221,8 +221,8 @@ public class FlightManager {
 			ResultSet rs = stm.executeQuery(sql);
 			if (!rs.next())
 				return;
-			String[] heads = { "Flight_no", "Depart_Time", "Arrive_Time", "Fare", "Source", "Dest" };
-			for (int i = 0; i < 6; ++i) { // flight table 6 attributes
+			String[] heads = { "Flight_no", "Depart_Time", "Arrive_Time", "Fare", "Seat_Limit", "Source", "Dest" };
+			for (int i = 0; i < 7; ++i) { // flight table 7 attributes
 				try {
 					System.out.println(heads[i] + " : " + rs.getString(i + 1)); // attribute
 																				// id
@@ -246,7 +246,7 @@ public class FlightManager {
 		System.out.println("All flights in the database now:");
 		try {
 			Statement stm = conn.createStatement();
-			String sql = "SELECT Flight_no FROM FLIGHTS";
+			String sql = "SELECT Flight_No FROM FLIGHTS";
 			ResultSet rs = stm.executeQuery(sql);
 
 			int resultCount = 0;
@@ -300,7 +300,8 @@ public class FlightManager {
 			 */
 			Statement stm = conn.createStatement();
 
-			String sql = String.format("SELECT FLIGHT_NO FROM FLIGHTS WHERE SOURCE = '%s' AND DEST = '%s'", values[0], values[1]);
+			String sql = "";
+
 			/**
 			 * Formulate your own SQL query:
 			 *
@@ -320,9 +321,6 @@ public class FlightManager {
 				 * Write your own to print flight information; you may use the
 				 * printFlightInfo() function
 				 */
-				printFlightInfo(rs.getString(1));
-				++resultCount;
-				System.out.println("=================================================");
 
 			}
 			System.out.println("Total " + resultCount + " choice(s).");
@@ -361,29 +359,6 @@ public class FlightManager {
 		 * } catch (SQLException e) { e.printStackTrace(); noException = false;
 		 * }
 		 */
-		try {
-			//select * from flights where depart_time > to_date('2000/01/01/10:00:00', 'yyyy/mm/dd/hh24/mi/ss');
-			// HK, Beijing
-			Statement stm = conn.createStatement();
-			String sql = String.format("SELECT F1.FLIGHT_NO, F2.FLIGHT_NO FROM FLIGHTS F1, FLIGHTS F2 WHERE F1.SOURCE = '%s' AND F1.DEST = F2.SOURCE AND F2.DEST = '%s' AND F1.ARRIVE_TIME <= F2.DEPART_TIME", values[0], values[1]);
-			System.out.println(sql);
-			ResultSet rs = stm.executeQuery(sql);
-			
-			int resultCount = 0;
-			while (rs.next()) {
-				printFlightInfo(rs.getString(1));
-				System.out.println("-------------------------------------------------");
-				printFlightInfo(rs.getString(2));
-				++resultCount;
-				System.out.println("=================================================");
-			}
-			System.out.println("Total " + resultCount + " choice(s).");
-			rs.close();
-			stm.close();
-		} catch (SQLException e) {
-			e.printStackTrace();
-			noException = false;
-		} 
 	}
 
 	/**
@@ -396,15 +371,15 @@ public class FlightManager {
 		 * A sample input is: CX109, 2015/03/15/13:00:00, 2015/03/15/19:00:00,
 		 * 2000, Beijing, Tokyo
 		 */
-		System.out.println("Please input the flight_no, depart_time, arrive_time, fare, source, dest:");
+		System.out.println("Please input the flight_no, depart_time, arrive_time, fare, seat_limit, source, dest:");
 		String line = in.nextLine();
 
 		if (line.equalsIgnoreCase("exit"))
 			return;
 		String[] values = line.split(",");
 
-		if (values.length < 6) {
-			System.out.println("The value number is expected to be 6");
+		if (values.length < 7) {
+			System.out.println("The value number is expected to be 7");
 			return;
 		}
 		for (int i = 0; i < values.length; ++i)
@@ -423,9 +398,10 @@ public class FlightManager {
 																		// is
 																		// arrive_time
 			values[3] + ", " + // this is fare
-					"'" + values[4] + "', " + // this is source
-					"'" + values[5] + "'" + // this is dest
-					")";
+			values[4] + ", " + // this is seat_limit
+			"'" + values[5] + "', " + // this is source
+			"'" + values[6] +  // this is dest
+			"')";
 			stm.executeUpdate(sql);
 			stm.close();
 			System.out.println("succeed to add flight ");
@@ -435,82 +411,6 @@ public class FlightManager {
 			System.out.println("fail to add a flight " + line);
 			noException = false;
 		}
-	}
-	
-	/**
-	 *given two cities A and B, a maximum number of allowed connections (M<=3),
-	 *and a maximum number of allowed travel hours (H), 
-	 *you should retrieve all the possible connections together with their fares. For instance,
-	 *given A=‘HK’, B=‘LA’, M=2, H=20, a connection may be HK ->Tokyo, Tokyo->LA 
- 	 *that is within 2 flights and with travel time less than 20 hours.
-	 **/
-	
-	private void selectFlights() {
-		System.out.println("Please input source, dest, connections, travel hours:");
-
-		String line = in.nextLine();
-
-		if (line.equalsIgnoreCase("exit"))
-			return;
-
-		String[] values = line.split(",");
-		for (int i = 0; i < values.length; ++i)
-			values[i] = values[i].trim();
-
-		 try {
-		 
-			 Statement stm = conn.createStatement();
-			 String sql =null;
-			 ResultSet rs =null;
-			 int countch=0;
-			 int choice=1;
-			 
-			switch (values[2]){
-			 
-			//conection<=3
-			 case "3" :
-				 sql = "SELECT F1.FLIGHT_NO,F2.FLIGHT_NO,F3.FLIGHT_NO,F1.fare,F2.fare,F3.fare FROM FLIGHTS F1,FLIGHTS F2,FLIGHTS F3 WHERE F1.DEST=F2.SOURCE AND F2.DEST=F3.SOURCE AND F1.SOURCE='"+values[0]+"' AND F3.DEST='"+values[1]+"' AND F2.DEPART_TIME>=F1.ARRIVE_TIME AND F3.DEPART_TIME>=F2.ARRIVE_TIME AND (F3.ARRIVE_TIME-F1.DEPART_TIME)*24<"+values[3];
-				 rs = stm.executeQuery(sql);
-				 while (rs.next()) {
-					 
-				 System.out.println("("+choice+"):" +rs.getString(1)+"->"+rs.getString(2)+"->"+rs.getString(3)+", fare: "+Math.round((rs.getInt(4)+rs.getInt(5)+rs.getInt(6))*0.75));
-				 	countch++;
-				 	choice++;
-				 	}
-				 
-			//conections<=3
-			 case "2" :
-				 sql = "SELECT F1.FLIGHT_NO, F2.FLIGHT_NO,F1.fare,F2.fare FROM FLIGHTS F1, FLIGHTS F2 WHERE F1.DEST=F2.SOURCE and F1.SOURCE = '"+values[0]+"' AND F2.DEST = '"+values[1]+"' AND F2.DEPART_TIME>=F1.ARRIVE_TIME AND (F2.ARRIVE_TIME-F1.DEPART_TIME)*24<"+values[3];
-				 rs = stm.executeQuery(sql);
-				 while (rs.next()) {
-					 System.out.println("("+choice+"):" +rs.getString(1)+"->"+rs.getString(2)+", fare: "+Math.round((rs.getInt(3)+rs.getInt(4))*0.9));
-				 	countch++;
-				 	choice++;
-				 	}
-				 
-			//conections<=3
-			 case "1" :
-				 sql = "SELECT FLIGHT_NO,fare FROM FLIGHTS WHERE SOURCE = '"+values[0]+"' AND DEST = '"+values[1]+"'AND (ARRIVE_TIME - DEPART_TIME)*24<"+values[3];
-				 rs = stm.executeQuery(sql);
-				 while (rs.next()) {
-					 System.out.println("("+choice+"):" +rs.getString(1)+", fare: "+(rs.getInt(2)));
-					 countch++;
-					 choice++;
-					 }
-				 
-				 break;
-			}
-			System.out.println(countch+" choice(s) selected");
-			countch=0;
-
-			 rs.close();
-			stm.close();
-		  
-			
-			} catch (SQLException e) { 
-			  e.printStackTrace(); noException = false;
-		  } 
-			
 	}
 
 	/**
@@ -528,35 +428,328 @@ public class FlightManager {
 		try {
 			Statement stm = conn.createStatement();
 
-			String sql = String.format("DELETE FROM FLIGHTS WHERE FLIGHT_NO = '%s'", line);
-			/*
-			 * Formuate your own SQL query:
-			 *
-			 * sql = "...";
-			 *
-			 */
+			String sql = "DELETE FROM FLIGHTS WHERE FLIGHT_NO = '"  + line + "'";
 
 			stm.executeUpdate(sql); // please pay attention that we use
 									// executeUpdate to update the database
-
 			stm.close();
 
-			/*
-			 * You may uncomment the statement below after formulating the SQL
-			 * query above
-			 *
-			 * System.out.println("succeed to delete flight " + line);
-			 *
-			 */
+			System.out.println("succeed to delete flight " + line);
+			 
 		} catch (SQLException e) {
 			e.printStackTrace();
 			System.out.println("fail to delete flight " + line);
 			noException = false;
 		}
 	}
+	
+	public void bookFlight() {
+		System.out.println("Please input the customer_id:");
+		String customerID = in.nextLine();
+		
+		System.out.println("Please input the flight numbers(separate by ,):");
+		String[] flightNo = in.nextLine().split(",");
+		
+		if (flightNo.length > 3) {
+			System.out.println("A connection of more than 3 flights is not allowed.");
+			System.out.println();
+			return;
+		}
+		
+		
+		for (int i = 0; i < flightNo.length; ++i) {
+			flightNo[i] = flightNo[i].trim();
+		}
+		
+		try {
+			Statement stm = conn.createStatement();
+			String sql = "SELECT COUNT(*) FROM BOOKING"; // find the no. of bookings
+			ResultSet rs1 = stm.executeQuery(sql);
+			
+			int bookingNo = 0;
+			
+			while (rs1.next()) {
+				bookingNo = rs1.getInt(1);
+			}
+			
+			rs1.close();
+			
+			// check if all of the flights have seats
+			for (int i = 0; i < flightNo.length; i++) {
+				sql = "SELECT SEAT_LIMIT FROM FLIGHTS WHERE FLIGHT_NO = '" + flightNo[i] + "'";
+				ResultSet rs2 = stm.executeQuery(sql);
+				
+				while (rs2.next()) {
+					if (rs2.getInt(1) <= 0) {
+						System.out.println("Seats full.");
+						System.out.println();
+						return;
+					}
+				}
+				rs2.close();
+			}
+			
+			if (flightNo.length == 1) {
+				bookingNo++;
+				sql = "INSERT INTO BOOKING VALUES('" + customerID + "', " + "'" + flightNo[0] 
+					+ "', " + "'B" + bookingNo + "')";
+				stm.executeUpdate(sql);
+				System.out.println("Succeed to book a flight for " + customerID + 
+						           ", flight id is B" + bookingNo);
+				System.out.println();
+			} else {
+				if (flightNo.length == 2) {
+					String dest = "";
+					String source = "";
+					
+					sql = "SELECT DEST FROM FLIGHTS WHERE FLIGHT_NO = '" + flightNo[0] + "'";
+					ResultSet rs3 = stm.executeQuery(sql);
+					
+					while (rs3.next()) {
+						dest = rs3.getString(1);
+					}
+					
+					rs3.close();
+					
+					sql = "SELECT SOURCE FROM FLIGHTS WHERE FLIGHT_NO = '" + flightNo[1] + "'";
+					ResultSet rs4 = stm.executeQuery(sql);
+					
+					while (rs4.next()) {
+						source = rs4.getString(1);
+					}
+					
+					rs4.close();
+					
+					if (!dest.equals(source)) {
+						System.out.println("The destination of " + flightNo[0] + " does not "
+								+ "coincide with the source of " + flightNo[1] + ".");
+						System.out.println();
+						return;
+					}
+					
+					//SimpleDateFormat sdf = new SimpleDateFormat("yyyy/mm/dd/hh:mm:ss");
+					Date arrive = null, depart = null;
+					
+					sql = "SELECT ARRIVE_TIME FROM FLIGHTS WHERE FLIGHT_NO = '" + flightNo[0] + "'";
+					ResultSet rs5 = stm.executeQuery(sql);
+					
+					while (rs5.next()) {
+						arrive = rs5.getDate(1);
+					}
+					
+					rs5.close();
+					
+					sql = "SELECT DEPART_TIME FROM FLIGHTS WHERE FLIGHT_NO = '" + flightNo[1] + "'";
+					ResultSet rs6 = stm.executeQuery(sql);
+					
+					while (rs6.next()) {
+						depart = rs6.getDate(1);
+					}
+					
+					rs6.close();
+					
+					if (arrive.after(depart)) {
+						System.out.println("The arrival time of " + flightNo[0] + " is after "
+								+ "the departure time of " + flightNo[1] + ".");
+						System.out.println();
+						return;
+					}
+					
+                    bookingNo++;
+                    
+					for (int i = 0 ; i < flightNo.length; i++) {
+						sql = "INSERT INTO BOOKING VALUES('" + customerID + "', " + "'" + flightNo[i] 
+								+ "', " + "'B" + bookingNo + "')";
+						stm.executeUpdate(sql);
+					}
+					
+					System.out.println("Succeed to book a flight for " + customerID + 
+					           ", flight id is B" + bookingNo);
+					System.out.println();
+					
+				} else {
+					String dest = "";
+					String source = "";
+					
+					sql = "SELECT DEST FROM FLIGHTS WHERE FLIGHT_NO = '" + flightNo[0] + "'";
+					ResultSet rs5 = stm.executeQuery(sql);
+					
+					while (rs5.next()) {
+						dest = rs5.getString(1);
+					}
+					
+					rs5.close();
+					
+					sql = "SELECT SOURCE FROM FLIGHTS WHERE FLIGHT_NO = '" + flightNo[1] + "'";
+					ResultSet rs6 = stm.executeQuery(sql);
+					
+					while (rs6.next()) {
+						source = rs6.getString(1);
+					}
+					
+					rs6.close();
+					
+					if (!dest.equals(source)) {
+						System.out.println("The destination of " + flightNo[0] + " does not "
+								+ "coincide with the source of " + flightNo[1] + ".");
+						System.out.println();
+						return;
+					}
+					
+					sql = "SELECT DEST FROM FLIGHTS WHERE FLIGHT_NO = '" + flightNo[1] + "'";
+					ResultSet rs7 = stm.executeQuery(sql);
+					
+					while (rs7.next()) {
+						dest = rs7.getString(1);
+					}
+					
+					rs7.close();
+					
+					sql = "SELECT SOURCE FROM FLIGHTS WHERE FLIGHT_NO = '" + flightNo[2] + "'";
+					ResultSet rs8 = stm.executeQuery(sql);
+					
+					while (rs8.next()) {
+						source = rs8.getString(1);
+					}
+					
+					rs8.close();
+					
+					if (!dest.equals(source)) {
+						System.out.println("The destination of " + flightNo[1] + " does not "
+								+ "coincide with the source of " + flightNo[2] + ".");
+						System.out.println();
+						return;
+					}
+					
+                    Date arrive = null, depart = null;
+					
+					sql = "SELECT ARRIVE_TIME FROM FLIGHTS WHERE FLIGHT_NO = '" + flightNo[0] + "'";
+					ResultSet rs9 = stm.executeQuery(sql);
+					
+					while (rs9.next()) {
+						arrive = rs9.getDate(1);
+					}
+					
+					rs9.close();
+					
+					sql = "SELECT DEPART_TIME FROM FLIGHTS WHERE FLIGHT_NO = '" + flightNo[1] + "'";
+					ResultSet rs10 = stm.executeQuery(sql);
+					
+					while (rs10.next()) {
+						depart = rs10.getDate(1);
+					}
+					
+					rs10.close();
+					
+					if (arrive.after(depart)) {
+						System.out.println("The arrival time of " + flightNo[0] + " is after "
+								+ "the departure time of " + flightNo[1] + ".");
+						System.out.println();
+						return;
+					}
+				
+					sql = "SELECT ARRIVE_TIME FROM FLIGHTS WHERE FLIGHT_NO = '" + flightNo[1] + "'";
+					ResultSet rs11 = stm.executeQuery(sql);
+					
+					while (rs11.next()) {
+						arrive = rs11.getDate(1);
+					}
+					
+					rs11.close();
+					
+					sql = "SELECT DEPART_TIME FROM FLIGHTS WHERE FLIGHT_NO = '" + flightNo[2] + "'";
+					ResultSet rs12 = stm.executeQuery(sql);
+					
+					while (rs12.next()) {
+						depart = rs12.getDate(1);
+					}
+					
+					rs12.close();
+					
+					if (arrive.after(depart)) {
+						System.out.println("The arrival time of " + flightNo[1] + " is after "
+								+ "the departure time of " + flightNo[2] + ".");
+						System.out.println();
+						return;
+					}
+					
+					bookingNo++;
+					
+					for (int i = 0 ; i < flightNo.length; i++) {
+						sql = "INSERT INTO BOOKING VALUES('" + customerID + "', " + "'" + flightNo[i] 
+								+ "', " + "'B" + bookingNo + "')";
+						stm.executeUpdate(sql);
+					}
+					
+					System.out.println("Succeed to book a flight for " + customerID + 
+					           ", flight id is B" + bookingNo);
+					System.out.println();
+					
+				}
+				stm.close();
+			}
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("fail to book flight");
+			noException = false;
+		}
+	}
+	
+	public void cancelFlight() {
+		System.out.println("Please input the customer_id and booking_id:");
+		
+		String line = in.nextLine();
+
+		if (line.equalsIgnoreCase("exit")) {
+			return;
+		}
+		
+		String[] values = line.split(",");
+
+		if (values.length < 2) {
+			System.out.println("The value number is expected to be 2");
+			return;
+		}
+		for (int i = 0; i < values.length; ++i) {
+			values[i] = values[i].trim();
+		}
+		
+		try {
+			Statement stm = conn.createStatement();
+			
+			String sql = "SELECT COUNT(*) FROM BOOKING WHERE BOOKING_ID = '" + values[1] + "'";
+			ResultSet rs = stm.executeQuery(sql);
+			
+			while (rs.next()) {
+				if (rs.getInt(1) <= 0) {
+					System.out.println("Booking " + values[1] + " customer " + values[0] + " fails to cancel");
+				    System.out.println();
+					return;
+				}
+			}
+			
+			rs.close();
+			
+			sql = "DELETE FROM BOOKING WHERE CUSTOMER_ID = '" + values[0] + "' "
+					   + "AND BOOKING_ID = '" + values[1] + "'"; 
+			
+			stm.executeUpdate(sql);
+			stm.close();
+			
+			System.out.println("Booking " + values[1] + " for customer " + values[0] + " is cancelled");
+			System.out.println();
+					   
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("fail to cancel flight " + line);
+			noException = false;
+		}
+	}
 
 	/**
-	 *123
+	 * Close the manager. Do not change this function.
 	 */
 	public void close() {
 		System.out.println("Thanks for using this manager! Bye...");
