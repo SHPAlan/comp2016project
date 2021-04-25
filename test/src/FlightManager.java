@@ -52,6 +52,7 @@ public class FlightManager {
 							// this array
 			"add a flight", "print flight information (by flight_no)", "delete a flight (by flight_no)",
 			"select a flight (by source, dest, stop_no = 0)", "select a flight (by source, dest, stop_no = 1)",
+			"select a flight (by source, dest, connection_no, travel_hours)",
 			"exit" };
 
 	/**
@@ -200,6 +201,8 @@ public class FlightManager {
 				selectFlightsInZeroStop();
 			} else if (options[choice - 1].equals("select a flight (by source, dest, stop_no = 1)")) {
 				selectFlightsInOneStop();
+			} else if (options[choice - 1].equals("select a flight (by source, dest, connection_no, travel_hours)")) {
+				selectFlights();
 			} else if (options[choice - 1].equals("exit")) {
 				break;
 			}
@@ -432,6 +435,82 @@ public class FlightManager {
 			System.out.println("fail to add a flight " + line);
 			noException = false;
 		}
+	}
+	
+	/**
+	 *given two cities A and B, a maximum number of allowed connections (M<=3),
+	 *and a maximum number of allowed travel hours (H), 
+	 *you should retrieve all the possible connections together with their fares. For instance,
+	 *given A=‘HK’, B=‘LA’, M=2, H=20, a connection may be HK ->Tokyo, Tokyo->LA 
+ 	 *that is within 2 flights and with travel time less than 20 hours.
+	 **/
+	
+	private void selectFlights() {
+		System.out.println("Please input source, dest, connections, travel hours:");
+
+		String line = in.nextLine();
+
+		if (line.equalsIgnoreCase("exit"))
+			return;
+
+		String[] values = line.split(",");
+		for (int i = 0; i < values.length; ++i)
+			values[i] = values[i].trim();
+
+		 try {
+		 
+			 Statement stm = conn.createStatement();
+			 String sql =null;
+			 ResultSet rs =null;
+			 int countch=0;
+			 int choice=1;
+			 
+			switch (values[2]){
+			 
+			//conection<=3
+			 case "3" :
+				 sql = "SELECT F1.FLIGHT_NO,F2.FLIGHT_NO,F3.FLIGHT_NO,F1.fare,F2.fare,F3.fare FROM FLIGHTS F1,FLIGHTS F2,FLIGHTS F3 WHERE F1.DEST=F2.SOURCE AND F2.DEST=F3.SOURCE AND F1.SOURCE='"+values[0]+"' AND F3.DEST='"+values[1]+"' AND F2.DEPART_TIME>=F1.ARRIVE_TIME AND F3.DEPART_TIME>=F2.ARRIVE_TIME AND (F3.ARRIVE_TIME-F1.DEPART_TIME)*24<"+values[3];
+				 rs = stm.executeQuery(sql);
+				 while (rs.next()) {
+					 
+				 System.out.println("("+choice+"):" +rs.getString(1)+"->"+rs.getString(2)+"->"+rs.getString(3)+", fare: "+Math.round((rs.getInt(4)+rs.getInt(5)+rs.getInt(6))*0.75));
+				 	countch++;
+				 	choice++;
+				 	}
+				 
+			//conections<=3
+			 case "2" :
+				 sql = "SELECT F1.FLIGHT_NO, F2.FLIGHT_NO,F1.fare,F2.fare FROM FLIGHTS F1, FLIGHTS F2 WHERE F1.DEST=F2.SOURCE and F1.SOURCE = '"+values[0]+"' AND F2.DEST = '"+values[1]+"' AND F2.DEPART_TIME>=F1.ARRIVE_TIME AND (F2.ARRIVE_TIME-F1.DEPART_TIME)*24<"+values[3];
+				 rs = stm.executeQuery(sql);
+				 while (rs.next()) {
+					 System.out.println("("+choice+"):" +rs.getString(1)+"->"+rs.getString(2)+", fare: "+Math.round((rs.getInt(3)+rs.getInt(4))*0.9));
+				 	countch++;
+				 	choice++;
+				 	}
+				 
+			//conections<=3
+			 case "1" :
+				 sql = "SELECT FLIGHT_NO,fare FROM FLIGHTS WHERE SOURCE = '"+values[0]+"' AND DEST = '"+values[1]+"'AND (ARRIVE_TIME - DEPART_TIME)*24<"+values[3];
+				 rs = stm.executeQuery(sql);
+				 while (rs.next()) {
+					 System.out.println("("+choice+"):" +rs.getString(1)+", fare: "+(rs.getInt(2)));
+					 countch++;
+					 choice++;
+					 }
+				 
+				 break;
+			}
+			System.out.println(countch+" choice(s) selected");
+			countch=0;
+
+			 rs.close();
+			stm.close();
+		  
+			
+			} catch (SQLException e) { 
+			  e.printStackTrace(); noException = false;
+		  } 
+			
 	}
 
 	/**
